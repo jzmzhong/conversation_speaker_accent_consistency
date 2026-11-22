@@ -2,7 +2,7 @@
 set -euo pipefail
 
 source ~/.bashrc
-source ~/.config/secrets.env
+source ~/.config/secrets.env # For HF_TOKEN and GITHUB_TOKEN
 
 CACHE_DIR="${CACHE_DIR:-$PWD/cache}"
 
