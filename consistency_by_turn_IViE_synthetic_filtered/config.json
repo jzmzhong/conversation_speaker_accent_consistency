@@ -1,0 +1,29 @@
+{
+  "exp_name": "consistency_by_turn_IViE_synthetic_filtered",
+  "output_dir": "/home/s2526235/projects/202_JSALT_2026/03_speaker_accent_consistency/consistency_by_turn_IViE_synthetic_filtered",
+  "extraction": {
+    "csv_path": "/home/s2526235/projects/202_JSALT_2026/results/Personaplex/02_hf/01_IViE_ref-retold/ref_tgt_turns.csv",
+    "selection": "filtered",
+    "turn_type": "gen",
+    "mode": "both",
+    "ref_root": "/home/s2526235/data/IViE/segmented/wav",
+    "gen_root": "/home/s2526235/projects/202_JSALT_2026/results/Personaplex/02_hf/01_IViE_ref-retold",
+    "cache_dir": "/home/s2526235/projects/202_JSALT_2026/03_speaker_accent_consistency/cache",
+    "voxlect_repo": "/home/s2526235/projects/202_JSALT_2026/03_speaker_accent_consistency/cache/voxlect-source",
+    "device": "cuda"
+  },
+  "scoring": {
+    "variance": {
+      "csv_path": "/home/s2526235/projects/202_JSALT_2026/results/Personaplex/02_hf/01_IViE_ref-retold/ref_tgt_turns.csv",
+      "selection": "filtered",
+      "turn_type": "gen",
+      "mode": "both"
+    },
+    "distance": {
+      "csv_path": "/home/s2526235/projects/202_JSALT_2026/results/Personaplex/02_hf/01_IViE_ref-retold/ref_tgt_turns.csv",
+      "selection": "filtered",
+      "turn_type": "gen",
+      "mode": "both"
+    }
+  }
+}

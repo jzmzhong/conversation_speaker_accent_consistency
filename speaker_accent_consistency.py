@@ -333,7 +333,7 @@ def score_distance(sides, embeddings, output_dir, turn_type):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("selection", choices=("all", "filtered"), help="Turn column to use")
+    parser.add_argument("--selection", choices=("all", "filtered"), help="Turn column to use")
     parser.add_argument("--ref-root", type=Path, help="Root for reference audio")
     parser.add_argument("--gen-root", type=Path, help="Root for ground-truth or generated turn audio")
     parser.add_argument("--csv", type=Path, required=True,
