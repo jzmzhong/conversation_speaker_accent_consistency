@@ -17,7 +17,7 @@ for label in "${LABELS[@]}"; do
     label_args+=(--label "$label")
 done
 
-uv run python "./12_summarise.py" \
+uv run python "./summarise.py" \
     "${EXPERIMENTS[@]}" \
     --output-dir "$SUMMARY_OUTPUT_DIR" \
     "${label_args[@]}" \

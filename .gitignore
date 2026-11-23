@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 *.pt
 .embeddings.lock
+*.out
+test_*.py

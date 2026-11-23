@@ -16,6 +16,7 @@ HF_REPOSITORIES = (
     "openai/whisper-large-v3",
     "openai/whisper-tiny",
 )
+ECAPA_REPOSITORY = "speechbrain/spkrec-ecapa-voxceleb"
 
 
 def configure_caches(cache_dir):
@@ -30,7 +31,7 @@ def configure_caches(cache_dir):
 def download_snapshot(repo_id, cache_dir):
     """Download model configs and weights, preferring safetensors when available."""
     files = list_repo_files(repo_id)
-    patterns = ["*.json", "*.txt", "*.yaml", "*.yml", "*.py", "*.model"]
+    patterns = ["*.json", "*.txt", "*.yaml", "*.yml", "*.py", "*.model", "*.ckpt"]
     patterns.append(
         "*.safetensors"
         if any(filename.endswith(".safetensors") for filename in files)
@@ -61,7 +62,7 @@ def checkout_voxlect(source_dir):
     return source_dir
 
 
-def setup_models(cache_dir):
+def setup_models(cache_dir, speaker_embedder="wavlm"):
     cache_dir = Path(cache_dir).expanduser().resolve()
     configure_caches(cache_dir)
     hub_dir = cache_dir / "huggingface" / "hub"
@@ -69,6 +70,10 @@ def setup_models(cache_dir):
     for repo_id in HF_REPOSITORIES:
         print(f"Downloading {repo_id}", flush=True)
         download_snapshot(repo_id, hub_dir)
+
+    if speaker_embedder == "ecapa":
+        print(f"Downloading {ECAPA_REPOSITORY}", flush=True)
+        download_snapshot(ECAPA_REPOSITORY, hub_dir)
 
     source_dir = checkout_voxlect(cache_dir / "voxlect-source")
     print(f"VoxLect source ready at {source_dir}")
@@ -83,8 +88,14 @@ def main():
         default=DEFAULT_MODEL_DIR,
         help="Directory for Hugging Face assets and VoxLect source (default: ./cache).",
     )
+    parser.add_argument(
+        "--speaker-embedder",
+        choices=("wavlm", "ecapa"),
+        default="wavlm",
+        help="Speaker embedding model to prepare (default: wavlm).",
+    )
     args = parser.parse_args()
-    setup_models(args.cache_dir)
+    setup_models(args.cache_dir, args.speaker_embedder)
 
 
 if __name__ == "__main__":

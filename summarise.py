@@ -1,4 +1,4 @@
-"""Summarise and plot conversation-side speaker and accent consistency scores."""
+"""Summarise and plot conversation-side or turn speaker and accent consistency scores."""
 
 import argparse
 import csv
@@ -22,12 +22,22 @@ METRICS = {
     "accent_distance": ("distance_by_side.csv", "accent_mean_cosine_distance", "Accent cosine distance"),
 }
 COLORS = ("#87909e", "#6d83bb", "#dc8b6a", "#75a895", "#b698c4")
+SCORE_FILES = {
+    "conversation-side": {
+        "variance_by_side.csv": "variance_by_side.csv",
+        "distance_by_side.csv": "distance_by_side.csv",
+    },
+    "turn": {
+        "variance_by_side.csv": "variance_by_turn.csv",
+        "distance_by_side.csv": "distance_by_turn.csv",
+    },
+}
 
 
-def read_scores(experiment):
+def read_scores(experiment, unit="conversation-side"):
     scores = {metric: [] for metric in METRICS}
     for filename in dict.fromkeys(spec[0] for spec in METRICS.values()):
-        path = experiment / filename
+        path = experiment / SCORE_FILES[unit][filename]
         if not path.is_file():
             warnings.warn(f"Missing {path}; its metrics will be omitted")
             continue
@@ -65,11 +75,12 @@ def statistics(values):
     return len(values), mean, sem
 
 
-def write_summary(path, scores):
+def write_summary(path, scores, unit="conversation-side"):
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as destination:
         writer = csv.writer(destination)
-        writer.writerow(("metric", "n_conversation_sides", "mean", "standard_error"))
+        count_column = "n_turns" if unit == "turn" else "n_conversation_sides"
+        writer.writerow(("metric", count_column, "mean", "standard_error"))
         for metric, values in scores.items():
             writer.writerow((metric, *statistics(values)))
 
@@ -122,6 +133,10 @@ def main():
                         help="Output directory for per-experiment CSVs and comparison plots")
     parser.add_argument("--label", action="append", default=[], metavar="EXPERIMENT=LABEL",
                         help="Override an experiment folder's plot label (repeatable)")
+    parser.add_argument("--unit", choices=tuple(SCORE_FILES), default="conversation-side",
+                        help="Unit of analysis and input CSV type (default: conversation-side)")
+    parser.add_argument("--require-complete", action="store_true",
+                        help="Require observations for every metric in every experiment")
     args = parser.parse_intermixed_args()
     paths = args.experiments
     if any(not path.is_dir() for path in paths):
@@ -136,13 +151,18 @@ def main():
         if name not in {path.name for path in paths}:
             parser.error(f"--label refers to an unknown experiment: {name}")
         labels[name] = label
-    experiments = [(path.name, read_scores(path)) for path in paths]
+    experiments = [(path.name, read_scores(path, args.unit)) for path in paths]
+    if args.require_complete:
+        missing = [f"{name}: {metric}" for name, scores in experiments
+                   for metric, values in scores.items() if not values]
+        if missing:
+            parser.error(f"Missing observations for {', '.join(missing)}")
     if not any(values for _, scores in experiments for values in scores.values()):
         parser.error("No scores found in the selected experiments")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     for name, scores in experiments:
         output = args.output_dir / name / "summary.csv"
-        write_summary(output, scores)
+        write_summary(output, scores, args.unit)
         print(f"Wrote {output}")
     for metric in METRICS:
         output = args.output_dir / f"{metric}_distribution.png"

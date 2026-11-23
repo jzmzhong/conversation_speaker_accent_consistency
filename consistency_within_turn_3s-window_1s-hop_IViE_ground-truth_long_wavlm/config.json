@@ -1,0 +1,35 @@
+{
+  "exp_name": "consistency_within_turn_3s-window_1s-hop_IViE_ground-truth_long",
+  "output_dir": "/home/s2526235/projects/202_JSALT_2026/03_speaker_accent_consistency/consistency_within_turn_3s-window_1s-hop_IViE_ground-truth_long",
+  "extraction": {
+    "csv_path": "/home/s2526235/projects/202_JSALT_2026/results/Personaplex/02_hf/01_IViE_ref-retold/ref_gt_turns.csv",
+    "selection": "long",
+    "turn_type": "gt",
+    "mode": "both",
+    "window_seconds": 3.0,
+    "hop_seconds": 1.0,
+    "ref_root": "/home/s2526235/data/IViE/segmented/wav",
+    "gen_root": "/home/s2526235/data/IViE/segmented/wav",
+    "cache_dir": "/home/s2526235/projects/202_JSALT_2026/03_speaker_accent_consistency/cache",
+    "voxlect_repo": "/home/s2526235/projects/202_JSALT_2026/03_speaker_accent_consistency/cache/voxlect-source",
+    "device": "cuda"
+  },
+  "scoring": {
+    "variance": {
+      "csv_path": "/home/s2526235/projects/202_JSALT_2026/results/Personaplex/02_hf/01_IViE_ref-retold/ref_gt_turns.csv",
+      "selection": "long",
+      "turn_type": "gt",
+      "mode": "both",
+      "window_seconds": 3.0,
+      "hop_seconds": 1.0
+    },
+    "distance": {
+      "csv_path": "/home/s2526235/projects/202_JSALT_2026/results/Personaplex/02_hf/01_IViE_ref-retold/ref_gt_turns.csv",
+      "selection": "long",
+      "turn_type": "gt",
+      "mode": "both",
+      "window_seconds": 3.0,
+      "hop_seconds": 1.0
+    }
+  }
+}

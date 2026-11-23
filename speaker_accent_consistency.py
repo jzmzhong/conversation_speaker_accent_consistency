@@ -1,4 +1,4 @@
-"""Extract and score WavLM speaker and VoxLect accent embeddings by conversation turn."""
+"""Extract and score speaker and VoxLect accent embeddings by conversation turn."""
 
 import argparse
 import csv
@@ -22,6 +22,7 @@ SAMPLE_RATE = 16000
 VOXLECT_CHUNK_SAMPLES = 15 * SAMPLE_RATE
 META_FIELDS = ("accent", "task", "conversation_id", "channel_id", "speaker_id")
 EMBEDDING_TYPES = ("speaker", "accent")
+ECAPA_MODEL = "speechbrain/spkrec-ecapa-voxceleb"
 
 
 @dataclass
@@ -57,6 +58,27 @@ def speaker_embedding(waveform, extractor, model, device):
     norm = torch.linalg.vector_norm(embedding)
     if not torch.isfinite(norm) or norm <= 0:
         raise ValueError("Invalid WavLM speaker embedding norm")
+    return (embedding / norm).cpu()
+
+
+def load_ecapa_model(device, cache_dir):
+    try:
+        from speechbrain.inference.speaker import EncoderClassifier
+    except ImportError:
+        from speechbrain.pretrained import EncoderClassifier
+
+    return EncoderClassifier.from_hparams(
+        source=ECAPA_MODEL,
+        savedir=str(cache_dir / "speechbrain" / "spkrec-ecapa-voxceleb"),
+        run_opts={"device": str(device)},
+    ).eval()
+
+
+def ecapa_speaker_embedding(waveform, model):
+    embedding = model.encode_batch(waveform.unsqueeze(0)).reshape(-1)
+    norm = torch.linalg.vector_norm(embedding)
+    if not torch.isfinite(norm) or norm <= 0:
+        raise ValueError("Invalid ECAPA-TDNN speaker embedding norm")
     return (embedding / norm).cpu()
 
 
@@ -196,7 +218,14 @@ def save_embeddings(path, embeddings):
 
 
 def extract_and_save(paths, output_dir, args):
-    cache_paths = {kind: output_dir / f"{kind}_embeddings.pt" for kind in EMBEDDING_TYPES}
+    cache_paths = {
+        kind: output_dir / (
+            f"speaker_embeddings_{args.speaker_embedder}.pt"
+            if kind == "speaker" and args.speaker_embedder != "wavlm"
+            else f"{kind}_embeddings.pt"
+        )
+        for kind in EMBEDDING_TYPES
+    }
     existing = {kind for kind, path in cache_paths.items() if path.exists()}
     embeddings = {
         kind: load_embeddings(path) if kind in existing else {}
@@ -224,13 +253,18 @@ def extract_and_save(paths, output_dir, args):
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
 
     if missing["speaker"]:
-        extractor, model = load_speaker_model(device, cache)
-        embeddings["speaker"].update(extract_embeddings(
-            missing["speaker"],
-            lambda wav: speaker_embedding(wav, extractor, model, device),
-            "speaker",
-        ))
-        del extractor, model
+        if args.speaker_embedder == "wavlm":
+            extractor, model = load_speaker_model(device, cache)
+            extract = lambda wav: speaker_embedding(wav, extractor, model, device)
+        else:
+            model = load_ecapa_model(device, cache_dir)
+            extract = lambda wav: ecapa_speaker_embedding(wav, model)
+        embeddings["speaker"].update(
+            extract_embeddings(missing["speaker"], extract, "speaker")
+        )
+        del model
+        if args.speaker_embedder == "wavlm":
+            del extractor
         gc.collect()
         if torch.device(device).type == "cuda":
             torch.cuda.empty_cache()
@@ -251,7 +285,12 @@ def extract_and_save(paths, output_dir, args):
         kind: {key: vectors[key].to(dtype=torch.float64).numpy() for key in paths}
         for kind, vectors in embeddings.items()
     }
-    model_settings = {"cache_dir": str(cache_dir), "voxlect_repo": str(repo), "device": device}
+    model_settings = {
+        "cache_dir": str(cache_dir),
+        "voxlect_repo": str(repo),
+        "device": device,
+        "speaker_embedder": args.speaker_embedder,
+    }
     return selected_embeddings, model_settings
 
 
@@ -343,6 +382,8 @@ def main():
                         help="Override the experiment output directory")
     parser.add_argument("--mode", choices=("both", "variance", "distance"), default="both",
                         help="Which scores to report (default: both)")
+    parser.add_argument("--speaker-embedder", choices=("wavlm", "ecapa"), default="wavlm",
+                        help="Speaker embedding model (default: wavlm)")
     parser.add_argument("--device", help="Extraction device (default: CUDA if available, otherwise CPU)")
     parser.add_argument("--cache-dir", type=Path, default=os.environ.get("CACHE_DIR") or DEFAULT_CACHE_DIR)
     parser.add_argument("--voxlect-repo", type=Path, default=os.environ.get("VOXLECT_REPO"))
